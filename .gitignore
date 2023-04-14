@@ -1,0 +1,8 @@
+# Build folders
+/Debug/
+/debug/
+/Release/
+/release/
+
+# Metadata when opened with Visual Studio Code
+/.vscode/
