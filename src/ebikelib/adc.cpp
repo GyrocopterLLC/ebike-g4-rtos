@@ -3,6 +3,8 @@
 #include "EbikeConfig.hpp"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "mc.h"
+#include "adc.hpp"
 
 #include "AdcHelpers.hpp"
 #include "NvicHelpers.hpp"
@@ -27,7 +29,7 @@ const uint32_t DMA1_Channel2_IRQn          = 12;
 const uint32_t DMA1_Channel3_IRQn          = 13;
 //const uint32_t DMA1_Channel4_IRQn          = 14;
 
-const uint32_t adc_interrupt_priority = 2;
+const uint32_t adc_interrupt_priority = configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY;
 
 uint16_t adc1_raw_regular_results[num_adc_conversions];
 uint16_t adc2_raw_regular_results[num_adc_conversions];
@@ -379,6 +381,14 @@ void adc_init() {
 //    adc3.CR.JADSTART.set(true);
 }
 
+void adc_get_currents(ADC_Current_T* currents) {
+	// Convert and return currents as floats
+
+	currents->iA = static_cast<float>(adc3_raw_regular_results[0]) / (4095.0f);
+	currents->iB = static_cast<float>(adc2_raw_regular_results[0]) / (4095.0f);
+	currents->iC = static_cast<float>(adc1_raw_regular_results[0]) / (4095.0f);
+}
+
 extern "C" {
 // ADC interrupt vectors
 void DMA1_CH1_IRQHandler(void) {
@@ -397,6 +407,8 @@ void DMA1_CH3_IRQHandler(void) {
 	adc3_ticks++;
 	auto dma1 = STM32LIB::DMA<STM32LIB::DMA1_Base_Address>();
 	dma1.IFCR.TCIF3.set(true);
+
+	wake_dac_task(); // all ADC samples have been collected, run the motor control
 }
 
 }

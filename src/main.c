@@ -1,5 +1,3 @@
-
-//#include <Pwm.hpp> // only gets the C stuff. no C++ allowed here
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -11,9 +9,10 @@
 #include "semphr.h"
 #include "tusb_config.h"
 #include "tusb.h"
+
 #include "board.h"
 
-#include "mc_startup.h"
+#include "mc.h"
 
 
 #if !defined  (HSE_VALUE)
@@ -186,20 +185,28 @@ static void loopback_task(void* pvParameters) {
 	// Simple read and loop back the read data
 
 	for(;;) {
-		while ( tud_cdc_available() ) {
+		while ( tud_cdc_available()) {
 			// read and echo back
 			uint32_t count = tud_cdc_read(buf, sizeof(buf));
+
+			if(buf[0] == 'D') { // start debug info
+				start_debug_usb_info();
+			}
+			if(buf[0] == 'd') { // stop debug info
+				stop_debug_usb_info();
+			}
 
 			// Echo back
 			// Note: Skip echo by commenting out write() and write_flush()
 			// for throughput test e.g
 			//    $ dd if=/dev/zero of=/dev/ttyACM0 count=10000
-			tud_cdc_write(buf, count);
+			//tud_cdc_write(buf, count);
 
 //			tud_cdc_write(" yay\r\n", 6);
 			// append whatever the fault status current is
-			sprintf(buf, " %04lX\r\n",get_fault_status());
+			sprintf(&(buf[count]), " %04lX\r\n",get_fault_status());
 			tud_cdc_write(buf, strlen(buf));
+
 		}
 
 		tud_cdc_write_flush();
@@ -207,11 +214,6 @@ static void loopback_task(void* pvParameters) {
 
 	vTaskDelay(1);
 }
-
-
-#if !defined(__SOFT_FP__) && defined(__ARM_FP)
-  #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
-#endif
 
 int main(void)
 {

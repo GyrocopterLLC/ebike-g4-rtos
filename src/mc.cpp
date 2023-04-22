@@ -1,30 +1,45 @@
 #include <type_traits>
+#include <cstring>
 
 #include "Timer.hpp"
 #include "Gpio.hpp"
 #include "Pwm.hpp"
 #include "STM32G473xx.hpp"
 #include "EbikeConfig.hpp"
-#include "mc_startup.h"
+#include "mc.h"
 #include "FOC_Lib.hpp"
 #include "RampControl.hpp"
 #include "Rampgen.hpp"
 #include "NvicHelpers.hpp"
 #include "CORDIC_Trig.hpp"
 #include "DRV8353.hpp"
+//#include "usb_info.h"
+#include "cobs.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "tusb.h"
 
 #include "adc.hpp"
 
 TaskHandle_t Dac_Task_Handle = NULL;
 TaskHandle_t Drv_Fault_Task_Handle = NULL;
+
+/**** Static placement buffers for classes ****/
 EbikeLib::DRV8353* drv_handle = nullptr;
 uint8_t drv_static_placement_buf[sizeof(EbikeLib::DRV8353)];
+
 EbikeLib::Pwm<EbikeLib::Timer_Periph::Timer1>* pwm_handle = nullptr;
 uint8_t pwm_static_placement_buf[sizeof(EbikeLib::Pwm<EbikeLib::Timer_Periph::Timer1>)];
 
+//EbikeLib::USB_Info* usb_info_handle = nullptr;
+//uint8_t usb_info_static_placement_buf[sizeof(EbikeLib::USB_Info)];
+// And this one also needs a packet buffer
+uint8_t usb_packet_buffer[64];
+uint8_t cobs_output_packet_buffer[64];
+// Simple packet starting array. Has a byte each for the type of data and number of data bytes
+uint8_t packet_start[2];
+bool debug_usb_send = false;
 
 uint32_t fault_status;
 
@@ -156,7 +171,7 @@ void mc_startup_pre_rtos() {
 	// Need a weak pullup on the fault pin
 	EbikeLib::pwm_gpio_config_pullup<EbikeLib::PWM_OC_Pin, EbikeLib::Pwm_OC_Af_Num>();
 
-
+//	usb_info_handle = new(usb_info_static_placement_buf) EbikeLib::USB_Info(usb_packet_buffer, 128);
 
 }
 
@@ -200,6 +215,7 @@ void DAC_Task(void* pvParameters) {
 	(void)(pvParameters); // unused
 
 	Dac_Task_Handle = xTaskGetCurrentTaskHandle();
+	ADC_Current_T currents;
 
 	// Initialize the DAC
 	// Configure GPIO
@@ -226,7 +242,7 @@ void DAC_Task(void* pvParameters) {
 	uint16_t DAC1val=0, DAC2val=0;
 	//float angle = 0.5f;
 	int32_t angle_int = 0x80000000u;
-	float sinef, cosinef;
+	float sinef, cosinef, anglef;
 
 	auto svm = EbikeLib::SVM();
 	auto ipark = EbikeLib::Inverse_Park();
@@ -241,14 +257,18 @@ void DAC_Task(void* pvParameters) {
 
 	// Now we're ready!
 	dac_task_is_running = true;
+	uint32_t dac_task_counter = 0;
 
 	while(true) {
-		//vTaskDelay(10); // Now triggered by Timer IRQ
-		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+		ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // triggered by ADC completion
+		// Get phase currents
+		adc_get_currents(&currents);
+
 		rampcont.calc();
 		rampgen.set_freq(rampcont.get_output());
 		rampgen.calc();
-		angle_int = float_to_q31(rampgen.get_output());
+		anglef = rampgen.get_output();
+		angle_int = float_to_q31(anglef);
 
 		//angle_int = static_cast<int32_t>(rampgen.get_output() * 2147483648.0f);
 
@@ -336,7 +356,52 @@ void DAC_Task(void* pvParameters) {
 		dac.DHR12L2.set(static_cast<uint32_t>(DAC2val));
 
 
+		// Try sending info by USB as well
+		// Just send a few values right now:
+		// - counter (uint32_t)
+		// - angle (ramp) (float)
+		// - SVM Ta (float)
+		// - SVM Tb (float)
+		// - SVM Tc (float)
+		if(debug_usb_send) {
+			uint32_t cobs_length;
+			uint32_t packet_pointer;
+			if(dac_task_counter % 40 == 0) { // once per 2 milliseconds
+				usb_packet_buffer[0] = 0x01; // Data packet tag
+				usb_packet_buffer[1] =
+						sizeof(dac_task_counter) + sizeof(anglef) + sizeof(svm.tA) + sizeof(svm.tB) + sizeof(svm.tC)
+						+ sizeof(currents.iA) + sizeof(currents.iB) + sizeof(currents.iC);
+				packet_pointer = 2;
+				memcpy(&(usb_packet_buffer[packet_pointer]), &dac_task_counter, sizeof(dac_task_counter));
+				packet_pointer += sizeof(dac_task_counter);
+				memcpy(&(usb_packet_buffer[packet_pointer]), &anglef, sizeof(anglef));
+				packet_pointer += sizeof(anglef);
+				memcpy(&(usb_packet_buffer[packet_pointer]), &svm.tA, sizeof(svm.tA));
+				packet_pointer += sizeof(svm.tA);
+				memcpy(&(usb_packet_buffer[packet_pointer]), &svm.tB, sizeof(svm.tB));
+				packet_pointer += sizeof(svm.tB);
+				memcpy(&(usb_packet_buffer[packet_pointer]), &svm.tC, sizeof(svm.tC));
+				packet_pointer += sizeof(svm.tC);
+				memcpy(&(usb_packet_buffer[packet_pointer]), &currents.iA, sizeof(currents.iA));
+				packet_pointer += sizeof(currents.iA);
+				memcpy(&(usb_packet_buffer[packet_pointer]), &currents.iB, sizeof(currents.iB));
+				packet_pointer += sizeof(currents.iB);
+				memcpy(&(usb_packet_buffer[packet_pointer]), &currents.iC, sizeof(currents.iC));
+				packet_pointer += sizeof(currents.iC);
+				cobs_length = encodeCOBS(usb_packet_buffer, packet_pointer, cobs_output_packet_buffer, sizeof(cobs_output_packet_buffer));
+				tud_cdc_write(cobs_output_packet_buffer, cobs_length);
+			}
+		}
+		dac_task_counter++;
 	}
+}
+
+void start_debug_usb_info() {
+	debug_usb_send = true;
+}
+
+void stop_debug_usb_info() {
+	debug_usb_send = false;
 }
 
 // Timer update interrupt
@@ -350,14 +415,17 @@ void TIM1_UP_TIM16_IRQHandler() {
 		rp.ODR.ODR14.set(true);
 	}
 
-	// tell our ramp generating test function to go do something
+
+
+}
+
+void wake_dac_task() {
 	BaseType_t higher_priority_woken = pdFALSE;
 	if(dac_task_is_running) {
 
 		vTaskNotifyGiveFromISR(Dac_Task_Handle, &higher_priority_woken);
 		portYIELD_FROM_ISR(higher_priority_woken);
 	}
-
 }
 
 // Timer break (fault / overcurrent) interrupt
