@@ -384,9 +384,13 @@ void adc_init() {
 void adc_get_currents(ADC_Current_T* currents) {
 	// Convert and return currents as floats
 
-	currents->iA = static_cast<float>(adc3_raw_regular_results[0]) / (4095.0f);
+	// So...a stupid error on the schematic (on the DRV8353 page) has the
+	// IA and IC current analog signals swapped.
+	// This means ADC1 is actually converting IA and ADC3 is converting IC,
+	// not the other way around as shown in the const defines
+	currents->iA = static_cast<float>(adc1_raw_regular_results[0]) / (4095.0f);
 	currents->iB = static_cast<float>(adc2_raw_regular_results[0]) / (4095.0f);
-	currents->iC = static_cast<float>(adc1_raw_regular_results[0]) / (4095.0f);
+	currents->iC = static_cast<float>(adc3_raw_regular_results[0]) / (4095.0f);
 }
 
 extern "C" {

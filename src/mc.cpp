@@ -190,7 +190,7 @@ void mc_startup_post_rtos() {
 }
 
 const float VdTesting = 0.0f;            // Vd testing (pu)
-const float VqTesting = 0.25f;         // Vq testing (pu)
+const float VqTesting = 0.05f;         // Vq testing (pu)
 
 void Drv_Fault_Task(void* pvParameters) {
 	(void)(pvParameters);
