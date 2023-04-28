@@ -1,11 +1,14 @@
+
 #include <type_traits>
 #include <cstring>
 
 #include "Timer.hpp"
 #include "Gpio.hpp"
 #include "Pwm.hpp"
+#include "HallSensor.hpp"
 #include "STM32G473xx.hpp"
 #include "EbikeConfig.hpp"
+#include "Adc.hpp"
 #include "mc.h"
 #include "FOC_Lib.hpp"
 #include "RampControl.hpp"
@@ -20,7 +23,6 @@
 #include "task.h"
 #include "tusb.h"
 
-#include "adc.hpp"
 
 TaskHandle_t Dac_Task_Handle = NULL;
 TaskHandle_t Drv_Fault_Task_Handle = NULL;
@@ -29,8 +31,13 @@ TaskHandle_t Drv_Fault_Task_Handle = NULL;
 EbikeLib::DRV8353* drv_handle = nullptr;
 uint8_t drv_static_placement_buf[sizeof(EbikeLib::DRV8353)];
 
-EbikeLib::Pwm<EbikeLib::Timer_Periph::Timer1>* pwm_handle = nullptr;
-uint8_t pwm_static_placement_buf[sizeof(EbikeLib::Pwm<EbikeLib::Timer_Periph::Timer1>)];
+using PwmT = EbikeLib::Pwm<EbikeLib::Timer_Periph::Timer1>;
+PwmT* pwm_handle = nullptr;
+uint8_t pwm_static_placement_buf[sizeof(PwmT)];
+
+using HallT = EbikeLib::HallSensor<EbikeLib::Hall_Timer>;
+HallT* hall_handle = nullptr;
+uint8_t hall_static_placement_buf[sizeof(HallT)];
 
 //EbikeLib::USB_Info* usb_info_handle = nullptr;
 //uint8_t usb_info_static_placement_buf[sizeof(EbikeLib::USB_Info)];
@@ -160,7 +167,7 @@ void mc_startup_pre_rtos() {
 	gport_c.MODER.MODER15.set(STM32LIB::GPIO_Mode::Output);
 
 
-	pwm_handle = new(pwm_static_placement_buf) EbikeLib::Pwm<EbikeLib::Timer_Periph::Timer1>();
+	pwm_handle = new(pwm_static_placement_buf) PwmT();
 	// Initialize GPIO for this PWM timer
 	EbikeLib::pwm_gpio_config<EbikeLib::PWM_C_Pin, EbikeLib::Pwm_C_Af_Num>();
 	EbikeLib::pwm_gpio_config<EbikeLib::PWM_B_Pin, EbikeLib::Pwm_B_Af_Num>();
@@ -169,10 +176,15 @@ void mc_startup_pre_rtos() {
 	EbikeLib::pwm_gpio_config<EbikeLib::PWM_Bn_Pin, EbikeLib::Pwm_Bn_Af_Num>();
 	EbikeLib::pwm_gpio_config<EbikeLib::PWM_An_Pin, EbikeLib::Pwm_An_Af_Num>();
 	// Need a weak pullup on the fault pin
-	EbikeLib::pwm_gpio_config_pullup<EbikeLib::PWM_OC_Pin, EbikeLib::Pwm_OC_Af_Num>();
+	EbikeLib::pwm_gpio_config<EbikeLib::PWM_OC_Pin, EbikeLib::Pwm_OC_Af_Num, STM32LIB::GPIO_Pull::Up>();
 
 //	usb_info_handle = new(usb_info_static_placement_buf) EbikeLib::USB_Info(usb_packet_buffer, 128);
 
+	// Start the Hall Sensor timer
+	hall_handle = new(hall_static_placement_buf) HallT();
+	EbikeLib::hall_gpio_config<EbikeLib::HALL_A_Pin, EbikeLib::Hall_A_Af_Num>();
+	EbikeLib::hall_gpio_config<EbikeLib::HALL_B_Pin, EbikeLib::Hall_B_Af_Num>();
+	EbikeLib::hall_gpio_config<EbikeLib::HALL_C_Pin, EbikeLib::Hall_C_Af_Num>();
 }
 
 void mc_startup_post_rtos() {
@@ -190,7 +202,7 @@ void mc_startup_post_rtos() {
 }
 
 const float VdTesting = 0.0f;            // Vd testing (pu)
-const float VqTesting = 0.05f;         // Vq testing (pu)
+const float VqTesting = 0.1f;         // Vq testing (pu)
 
 void Drv_Fault_Task(void* pvParameters) {
 	(void)(pvParameters);

@@ -101,35 +101,7 @@ float convert_dt_reg_to_ns(uint32_t dtreg, float fDTS) {
 	return tDTS_ns * static_cast<float>(deadtime_tDTS);
 }
 
-constexpr std::array<uint32_t, 12> timer_update_irqs = {
-		STM32LIB::TIM1_UP_TIM16_IRQ_Num,
-		STM32LIB::TIM2_IRQ_Num,
-		STM32LIB::TIM3_IRQ_Num,
-		STM32LIB::TIM4_IRQ_Num,
-		STM32LIB::TIM5_IRQ_Num,
-		STM32LIB::TIM6_DAC_IRQ_Num,
-		STM32LIB::TIM7_DAC_IRQ_Num,
-		STM32LIB::TIM8_UP_IRQ_Num,
-		STM32LIB::TIM1_BRK_TIM15_IRQ_Num,
-		STM32LIB::TIM1_UP_TIM16_IRQ_Num,
-		STM32LIB::TIM1_TRG_COM_TIM17_IRQ_Num,
-		STM32LIB::TIM20_UP_IRQ_Num
-};
 
-constexpr std::array<uint32_t, 12> timer_break_irqs = {
-		STM32LIB::TIM1_BRK_TIM15_IRQ_Num,
-		STM32LIB::TIM2_IRQ_Num,
-		STM32LIB::TIM3_IRQ_Num,
-		STM32LIB::TIM4_IRQ_Num,
-		STM32LIB::TIM5_IRQ_Num,
-		STM32LIB::TIM6_DAC_IRQ_Num,
-		STM32LIB::TIM7_DAC_IRQ_Num,
-		STM32LIB::TIM8_BRK_IRQ_Num,
-		STM32LIB::TIM1_BRK_TIM15_IRQ_Num,
-		STM32LIB::TIM1_UP_TIM16_IRQ_Num,
-		STM32LIB::TIM1_TRG_COM_TIM17_IRQ_Num,
-		STM32LIB::TIM20_BRK_IRQ_Num
-};
 
 template <Timer_Periph pwm_tim>
 class Pwm {
@@ -419,22 +391,13 @@ public:
 };
 
 // Helper function to set GPIOs in PWM output
-template<Pin pwm_pin, uint32_t af_num>
+template<Pin pwm_pin, uint32_t af_num, STM32LIB::GPIO_Pull pull = STM32LIB::GPIO_Pull::None>
 void pwm_gpio_config() {
 	gpio_mode<pwm_pin.Port,  pwm_pin.Num, STM32LIB::GPIO_Mode::Alternate_Function>();
 	gpio_speed<pwm_pin.Port,  pwm_pin.Num, STM32LIB::GPIO_Speed::Very_High>();
-	gpio_pull<pwm_pin.Port,  pwm_pin.Num, STM32LIB::GPIO_Pull::None>();
+	gpio_pull<pwm_pin.Port,  pwm_pin.Num, pull>();
 	gpio_af<pwm_pin.Port,  pwm_pin.Num, af_num>();
 }
-
-template<Pin pwm_pin, uint32_t af_num>
-void pwm_gpio_config_pullup() {
-	gpio_mode<pwm_pin.Port,  pwm_pin.Num, STM32LIB::GPIO_Mode::Alternate_Function>();
-	gpio_speed<pwm_pin.Port,  pwm_pin.Num, STM32LIB::GPIO_Speed::Very_High>();
-	gpio_pull<pwm_pin.Port,  pwm_pin.Num, STM32LIB::GPIO_Pull::Up>();
-	gpio_af<pwm_pin.Port,  pwm_pin.Num, af_num>();
-}
-
 
 } // namespace EbikeLib
 

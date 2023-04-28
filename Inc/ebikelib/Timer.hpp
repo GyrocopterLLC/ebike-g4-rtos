@@ -25,6 +25,36 @@ constexpr std::array<uint32_t, 12> timer_addresses = {
 		STM32LIB::TIM20_Base_Address
 };
 
+constexpr std::array<uint32_t, 12> timer_update_irqs = {
+		STM32LIB::TIM1_UP_TIM16_IRQ_Num,
+		STM32LIB::TIM2_IRQ_Num,
+		STM32LIB::TIM3_IRQ_Num,
+		STM32LIB::TIM4_IRQ_Num,
+		STM32LIB::TIM5_IRQ_Num,
+		STM32LIB::TIM6_DAC_IRQ_Num,
+		STM32LIB::TIM7_DAC_IRQ_Num,
+		STM32LIB::TIM8_UP_IRQ_Num,
+		STM32LIB::TIM1_BRK_TIM15_IRQ_Num,
+		STM32LIB::TIM1_UP_TIM16_IRQ_Num,
+		STM32LIB::TIM1_TRG_COM_TIM17_IRQ_Num,
+		STM32LIB::TIM20_UP_IRQ_Num
+};
+
+constexpr std::array<uint32_t, 12> timer_break_irqs = {
+		STM32LIB::TIM1_BRK_TIM15_IRQ_Num,
+		STM32LIB::TIM2_IRQ_Num,
+		STM32LIB::TIM3_IRQ_Num,
+		STM32LIB::TIM4_IRQ_Num,
+		STM32LIB::TIM5_IRQ_Num,
+		STM32LIB::TIM6_DAC_IRQ_Num,
+		STM32LIB::TIM7_DAC_IRQ_Num,
+		STM32LIB::TIM8_BRK_IRQ_Num,
+		STM32LIB::TIM1_BRK_TIM15_IRQ_Num,
+		STM32LIB::TIM1_UP_TIM16_IRQ_Num,
+		STM32LIB::TIM1_TRG_COM_TIM17_IRQ_Num,
+		STM32LIB::TIM20_BRK_IRQ_Num
+};
+
 template<Timer_Periph tim>
 constexpr uint32_t get_timer_base_address() {
 	return timer_addresses[static_cast<uint32_t>(tim)];

@@ -150,7 +150,10 @@ const uint32_t Pwm_OC_Af_Num = 9;
 const uint32_t Spi_SCK_Af_Num = 5;
 const uint32_t Spi_MISO_Af_Num = 5;
 const uint32_t Spi_MOSI_Af_Num = 5;
-
+// Hall Sensor
+const uint32_t Hall_A_Af_Num = 2;
+const uint32_t Hall_B_Af_Num = 2;
+const uint32_t Hall_C_Af_Num = 2;
 
 } // namespace EbikeLib
 

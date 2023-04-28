@@ -20,30 +20,30 @@ namespace EbikeLib {
 class RCC_Funcs {
 public:
 
-	template<EbikeLib::Timer_Periph pwm_tim>
+	template<EbikeLib::Timer_Periph tim>
 	static void start_timer_clock() {
 		auto rcc = STM32LIB::RCC<STM32LIB::RCC_Base_Address>();
-		if constexpr (pwm_tim == Timer_Periph::Timer1) {
+		if constexpr (tim == Timer_Periph::Timer1) {
 			rcc.APB2ENR.TIM1EN.set(true);
-		} else if constexpr (pwm_tim == Timer_Periph::Timer2) {
+		} else if constexpr (tim == Timer_Periph::Timer2) {
 			rcc.APB1ENR1.TIM2EN.set(true);
-		} else if constexpr (pwm_tim == Timer_Periph::Timer3) {
+		} else if constexpr (tim == Timer_Periph::Timer3) {
 			rcc.APB1ENR1.TIM3EN.set(true);
-		} else if constexpr (pwm_tim == Timer_Periph::Timer4) {
+		} else if constexpr (tim == Timer_Periph::Timer4) {
 			rcc.APB1ENR1.TIM4EN.set(true);
-		} else if constexpr (pwm_tim == Timer_Periph::Timer5) {
+		} else if constexpr (tim == Timer_Periph::Timer5) {
 			rcc.APB1ENR1.TIM5EN.set(true);
-		} else if constexpr (pwm_tim == Timer_Periph::Timer6) {
+		} else if constexpr (tim == Timer_Periph::Timer6) {
 			rcc.APB1ENR1.TIM6EN.set(true);
-		} else if constexpr (pwm_tim == Timer_Periph::Timer7) {
+		} else if constexpr (tim == Timer_Periph::Timer7) {
 			rcc.APB1ENR1.TIM7EN.set(true);
-		} else if constexpr (pwm_tim == Timer_Periph::Timer8) {
+		} else if constexpr (tim == Timer_Periph::Timer8) {
 			rcc.APB2ENR.TIM8EN.set(true);
-		} else if constexpr (pwm_tim == Timer_Periph::Timer15) {
+		} else if constexpr (tim == Timer_Periph::Timer15) {
 			rcc.APB2ENR.TIM15EN.set(true);
-		} else if constexpr (pwm_tim == Timer_Periph::Timer16) {
+		} else if constexpr (tim == Timer_Periph::Timer16) {
 			rcc.APB2ENR.TIM16EN.set(true);
-		} else if constexpr (pwm_tim == Timer_Periph::Timer17) {
+		} else if constexpr (tim == Timer_Periph::Timer17) {
 			rcc.APB2ENR.TIM17EN.set(true);
 		} else {
 			rcc.APB2ENR.TIM20EN.set(true);

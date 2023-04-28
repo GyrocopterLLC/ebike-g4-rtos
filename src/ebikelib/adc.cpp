@@ -4,8 +4,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "mc.h"
-#include "adc.hpp"
-
+#include "Adc.hpp"
 #include "AdcHelpers.hpp"
 #include "NvicHelpers.hpp"
 
