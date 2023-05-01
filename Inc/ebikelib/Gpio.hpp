@@ -238,6 +238,15 @@ void gpio_set(bool true_is_high) {
 	}
 }
 
+template<Gpio_Port gport, uint16_t gpin>
+bool gpio_get() {
+	static_assert(gpin <= 15);
+
+	auto gperiph = get_gpio<gport>();
+	uint32_t idr = gperiph.IDR.get();
+	return ((idr & (1 << gpin)) != 0);
+}
+
 } // namespace EbikeLib
 
 #endif // GPIO_HPP_

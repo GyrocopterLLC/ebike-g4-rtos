@@ -35,7 +35,7 @@ using PwmT = EbikeLib::Pwm<EbikeLib::Timer_Periph::Timer1>;
 PwmT* pwm_handle = nullptr;
 uint8_t pwm_static_placement_buf[sizeof(PwmT)];
 
-using HallT = EbikeLib::HallSensor<EbikeLib::Hall_Timer>;
+using HallT = EbikeLib::HallSensor<EbikeLib::Hall_Timer, EbikeLib::HALL_A_Pin, EbikeLib::HALL_B_Pin, EbikeLib::HALL_C_Pin>;
 HallT* hall_handle = nullptr;
 uint8_t hall_static_placement_buf[sizeof(HallT)];
 

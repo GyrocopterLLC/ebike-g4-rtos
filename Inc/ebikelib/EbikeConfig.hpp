@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cstdint>
+#include <array>
 #include "Gpio.hpp"
 #include "Timer.hpp"
 #include "Pin.hpp"
@@ -154,7 +155,21 @@ const uint32_t Spi_MOSI_Af_Num = 5;
 const uint32_t Hall_A_Af_Num = 2;
 const uint32_t Hall_B_Af_Num = 2;
 const uint32_t Hall_C_Af_Num = 2;
-
+// Hall_Angles:
+// Hall states 1 through 6 (assigned to array indices 0 through 5)
+// The value is float between 0.0 and 1.0 which corresponds to 0-360 degrees
+// Each value is the angle at which a Hall state transition occurs when the wheel
+// is rotating in the forward direction.
+const std::array<float, 6> Hall_Angles{0.721090f,0.0691474f,0.896364f,0.396317f,0.569599f,0.220085f};
+// Hall_Rotation_Table:
+// Each location in the array 0 through 5 corresponds with a Hall state 1 through 6
+// The value is the NEXT Hall state for the index's state, if rotating forwards
+// Likewise, the index is the NEXT Hall state for the value, if rotating backwards
+// Standard rotation list: (2->6->4->5->1->3)
+// [2-1] = 6, [6-1] = 4, [4-1] = 5, [5-1] = 1, [1-1] = 3, [3-1] = 2
+// [1] = 6, [5] = 4, [3] = 5, [4] = 1, [0] = 3, [2] = 2
+// [3, 6, 2, 5, 1, 4]
+const std::array<uint8_t, 6> Hall_Rotation_Table{3, 6, 2, 5, 1, 4};
 } // namespace EbikeLib
 
 #endif // EBIKECONFIG_HPP_
