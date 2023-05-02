@@ -181,10 +181,10 @@ void mc_startup_pre_rtos() {
 //	usb_info_handle = new(usb_info_static_placement_buf) EbikeLib::USB_Info(usb_packet_buffer, 128);
 
 	// Start the Hall Sensor timer
-	hall_handle = new(hall_static_placement_buf) HallT();
 	EbikeLib::hall_gpio_config<EbikeLib::HALL_A_Pin, EbikeLib::Hall_A_Af_Num>();
 	EbikeLib::hall_gpio_config<EbikeLib::HALL_B_Pin, EbikeLib::Hall_B_Af_Num>();
 	EbikeLib::hall_gpio_config<EbikeLib::HALL_C_Pin, EbikeLib::Hall_C_Af_Num>();
+	hall_handle = new(hall_static_placement_buf) HallT();
 }
 
 void mc_startup_post_rtos() {
@@ -278,11 +278,17 @@ void DAC_Task(void* pvParameters) {
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // triggered by ADC completion
 		// Get phase currents
 		adc_get_currents(&currents);
+		// perform Hall sensor math
+		hall_handle->increment_angle();
 
 		rampcont.calc();
 		rampgen.set_freq(rampcont.get_output());
 		rampgen.calc();
+#if 0
 		anglef = rampgen.get_output();
+#else
+		anglef = hall_handle->get_angle();
+#endif
 		angle_int = float_to_q31(anglef);
 
 		//angle_int = static_cast<int32_t>(rampgen.get_output() * 2147483648.0f);

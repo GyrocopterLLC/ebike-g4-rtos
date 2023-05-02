@@ -247,7 +247,7 @@ private:
     float FilteredAngle = 0.0f;
     uint32_t CaptureValue = 0;
     std::array<uint32_t,6> CaptureForState{0,0,0,0,0,0};
-    uint16_t Prescaler = 169; // Default for 1us with 170MHz clock
+    uint16_t Prescaler = 170; // Default for 1us with 170MHz clock
     float ActualTimerTick_us = 1.0f;
     uint8_t CurrentAccelSample = 0;
     HallState Status = HallState::Stopped;
