@@ -123,8 +123,9 @@ public:
 		// smooth the angle using the difference between the
 		// before and after step change angles
 		FilteredAngle = clip_to_one(Angle - AngleStepDiff);
-		// Decrease angle step difference towards zero
+
 		if(AngleStepDiff != 0.0f) {
+			// Decrease angle step difference towards zero
 			AngleStepDiff = AngleStepDiff * 0.9f;
 			// And clip it when it is too small
 			if(std::abs(AngleStepDiff) <= 0.000001f) {
@@ -135,6 +136,7 @@ public:
 
 	float get_angle() {
 		return FilteredAngle;
+		//return Angle;
 	}
 
 	void capture_irq_callback() {
@@ -156,7 +158,8 @@ public:
 		Speed = (1000000.0f/(captime_us));
 
 		// Create the per-update angle increment
-		AngleIncrement = Speed / static_cast<float>(CallingFrequency);
+		AngleIncrement = 2.0f * Speed / static_cast<float>(CallingFrequency);
+		// The factor of 2.0 comes from the angle spanning -1.0 to +1.0
 
 		// Determine rotation direction
 		if(Status == HallState::Stopped) {
@@ -293,6 +296,12 @@ private:
 			// Average the beginning and ending angles for this state
 			float end_state_angle = HallAngleForState[next_state - 1];
 			float begin_state_angle = HallAngleForState[state - 1];
+			if((end_state_angle > 0.5f && begin_state_angle < -0.5f) ||
+					(end_state_angle < -0.5f && begin_state_angle > 0.5f)) {
+				// wrap one of the two angles to more than +1.0 by adding +2.0 to the sum
+				// this will correct for crossing over the +/- 180degree boundary
+				return clip_to_one((end_state_angle + begin_state_angle + 2.0f) / 2.0f);
+			}
 			return (end_state_angle + begin_state_angle) / 2.0f;
 		} else {
 			// Invalid state, so we can't know the angle
@@ -300,12 +309,16 @@ private:
 		}
     }
 
+    // Range of the angle is -1.0 to +1.0
+    // which maps to -180 degrees to +180 degrees
+    // Since the entire space is periodic, we can
+    // add or subtract 2.0 whenever outside of this range
     float clip_to_one(float input) {
-    	while(input > 1.0f) {
-    		input -= 1.0f;
+    	while(input >= 1.0f) {
+    		input -= 2.0f;
     	}
-    	while(input < 0.0f) {
-    		input += 1.0f;
+    	while(input < -1.0f) {
+    		input += 2.0f;
     	}
     	return input;
     }

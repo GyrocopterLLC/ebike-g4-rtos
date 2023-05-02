@@ -160,7 +160,24 @@ const uint32_t Hall_C_Af_Num = 2;
 // The value is float between 0.0 and 1.0 which corresponds to 0-360 degrees
 // Each value is the angle at which a Hall state transition occurs when the wheel
 // is rotating in the forward direction.
-const std::array<float, 6> Hall_Angles{0.721090f,0.0691474f,0.896364f,0.396317f,0.569599f,0.220085f};
+/*
+ * This is the [0.0, 1.0) scaling
+const std::array<float, 6> Hall_Angles{
+	0.721090f,	// state 1: 259.59 deg
+	0.0691474f,	// state 2: 24.89 deg
+	0.896364f,	// state 3: 322.69 deg
+	0.396317f,	// state 4: 142.67 deg
+	0.569599f,	// state 5: 205.06 deg
+	0.220085f};	// state 6: 79.23 deg
+*/
+/* This is the [-1.0, 1.0) scaling */
+const std::array<float, 6> Hall_Angles{
+	-0.55782f,	// state 1: 259.59 deg
+	0.1382948f,	// state 2: 24.89 deg
+	-0.207272f,	// state 3: 322.69 deg
+	0.792634f,	// state 4: 142.67 deg
+	-0.860802f,	// state 5: 205.06 deg
+	0.44017f};	// state 6: 79.23 deg
 // Hall_Rotation_Table:
 // Each location in the array 0 through 5 corresponds with a Hall state 1 through 6
 // The value is the NEXT Hall state for the index's state, if rotating forwards
