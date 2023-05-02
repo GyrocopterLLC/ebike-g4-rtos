@@ -199,6 +199,9 @@ void mc_startup_post_rtos() {
 	pwm_handle->enable_update_irq();
 	// and the motor outputs
 	pwm_handle->motor_on_off(true);
+
+	// Enable interrupts on the Hall sensor
+	hall_handle->enable_interrupts();
 }
 
 const float VdTesting = 0.0f;            // Vd testing (pu)
@@ -462,6 +465,23 @@ void TIM1_BRK_TIM15_IRQHandler() {
 	BaseType_t higher_priority_woken = pdFALSE;
 	vTaskNotifyGiveFromISR(Drv_Fault_Task_Handle, &higher_priority_woken);
 	portYIELD_FROM_ISR(higher_priority_woken);
+}
+
+void TIM4_IRQHandler() {
+	// Which interrupt was it?
+	// auto tim4 = EbikeLib::get_timer<EbikeLib::Timer_Periph::Timer4>();
+	auto tim4 = STM32LIB::TIM<STM32LIB::TIM4_Base_Address>();
+
+	if(tim4.SR.UIF.get()) {
+		// Update interrupt, overflow occurred
+		tim4.SR.UIF.set(false); // reset the interrupt by writing 0
+		hall_handle->overflow_irq_callback();
+	}
+	if(tim4.SR.CC1IF.get()) {
+		tim4.SR.CC1IF.set(false);
+		hall_handle->capture_irq_callback();
+	}
+
 }
 
 

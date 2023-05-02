@@ -100,7 +100,7 @@ public:
 
 	}
 
-	void enable_update_irq() const {
+	void enable_interrupts() const {
 		constexpr uint32_t irqn = timer_update_irqs[static_cast<uint32_t>(hall_tim)];
 		set_interrupt_priority<irqn>(configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY);
 		enable_interrupt<irqn>();
@@ -227,7 +227,7 @@ public:
 		// Set to the middle of the state.
 		// Interpolate between previous state and this state,
 		// which puts us smack in the middle of the state
-		Angle = get_state_midpoint_angle();
+		Angle = get_state_midpoint_angle(CurrentState);
 		FilteredAngle = Angle;
 	}
 
