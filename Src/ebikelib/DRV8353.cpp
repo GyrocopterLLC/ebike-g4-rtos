@@ -254,7 +254,7 @@ bool DRV8353::set_calibration(uint8_t channel_bit_pack) {
 }
 
 uint32_t DRV8353::get_fault_status() {
-	// Fault1 in lower 16 bits, Fault2 in upper 16 bits
+	// Fault1 in upper 16 bits, Fault2 in lower 16 bits
 	return (static_cast<uint32_t>(read_reg(DRV8353_Registers::Fault1_Status_Reg)) << (16u))
 			+ static_cast<uint32_t>(read_reg(DRV8353_Registers::Fault2_Status_Reg));
 }

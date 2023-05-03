@@ -191,7 +191,11 @@ void mc_startup_post_rtos() {
 	adc_init(); // Can't do this outside of a RTOS task!! Uses vTaskDelay
 	drv_handle = new(drv_static_placement_buf) EbikeLib::DRV8353(); // same here
 
-	// now that the drv8353 is enabled, let's turn on the PWM interrupts
+	// now that both ADC and DRV8353 are up and running, calibrate the current sensors
+	// best to do this without motor running, too.
+	adc_calibrate_currents(drv_handle);
+
+	// and now that the drv8353 is enabled, let's turn on the PWM interrupts
 	// be sure to clear the break flag if it was set
 	// if there's a break input active, the flag will come right back and that's okay
 	pwm_handle->clear_break();
@@ -435,9 +439,6 @@ void TIM1_UP_TIM16_IRQHandler() {
 	} else {
 		rp.ODR.ODR14.set(true);
 	}
-
-
-
 }
 
 void wake_dac_task() {

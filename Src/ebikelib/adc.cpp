@@ -30,14 +30,23 @@ const uint32_t DMA1_Channel3_IRQn          = 13;
 
 const uint32_t adc_interrupt_priority = configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY;
 
+TaskHandle_t adc_calibration_task = NULL;
+bool calibrating_current = false;
+const uint32_t NumCalibrationSamples = 256;
+
 uint16_t adc1_raw_regular_results[num_adc_conversions];
 uint16_t adc2_raw_regular_results[num_adc_conversions];
 uint16_t adc3_raw_regular_results[num_adc_conversions];
+
+float IaNull;
+float IbNull;
+float IcNull;
+
 //uint16_t adc4_raw_regular_results[8];
 
-uint32_t adc1_ticks = 0;
-uint32_t adc2_ticks = 0;
-uint32_t adc3_ticks = 0;
+//uint32_t adc1_ticks = 0;
+//uint32_t adc2_ticks = 0;
+//uint32_t adc3_ticks = 0;
 
 /**
  * Enables an ADC, checking that the ready bit shows it's good to go.
@@ -392,24 +401,75 @@ void adc_get_currents(ADC_Current_T* currents) {
 	currents->iC = static_cast<float>(adc3_raw_regular_results[0]) / (4095.0f);
 }
 
+void adc_calibrate_currents(EbikeLib::DRV8353* drv) {
+	// DRV8353 has a calibrate function that shorts the inputs to each
+	// current sensor, allowing us to measure the zero current point
+	// We can then save that as null, and all future current measurements
+	// can subtract this value to get real current.
+
+	drv->set_calibration(1+2+4); // all three channels simultaneously
+	// average a few values of current sensors to get the null
+
+	// remember our current task handle to use notifications
+	adc_calibration_task = xTaskGetCurrentTaskHandle();
+
+	// temporarily max out our task's priority
+	uint32_t calling_task_priority = uxTaskPriorityGet(adc_calibration_task);
+	vTaskPrioritySet(adc_calibration_task, configMAX_PRIORITIES-1);
+
+	// start recording currents
+	calibrating_current = true;
+
+	uint32_t channelAsum = 0;
+	uint32_t channelBsum = 0;
+	uint32_t channelCsum = 0;
+
+	// loop here until done. Woken up by the CH3 DMA IRQ handler
+	for(uint32_t i = 0; i < NumCalibrationSamples; i++) {
+		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+		channelAsum += adc1_raw_regular_results[0];
+		channelBsum += adc2_raw_regular_results[0];
+		channelCsum += adc3_raw_regular_results[0];
+	}
+	drv->set_calibration(0); // deactivate the calibration mode
+	calibrating_current = false;
+	// clear the notification if it's set
+	ulTaskNotifyTake(pdTRUE, 0);
+	// reset task priority
+	vTaskPrioritySet(adc_calibration_task, calling_task_priority);
+
+	// save the calibration values
+	IaNull = static_cast<float>(channelAsum / NumCalibrationSamples) / (4095.0f);
+	IbNull = static_cast<float>(channelBsum / NumCalibrationSamples) / (4095.0f);
+	IcNull = static_cast<float>(channelCsum / NumCalibrationSamples) / (4095.0f);
+
+}
+
 extern "C" {
 // ADC interrupt vectors
 void DMA1_CH1_IRQHandler(void) {
-	adc1_ticks++;
+//	adc1_ticks++;
 	auto dma1 = STM32LIB::DMA<STM32LIB::DMA1_Base_Address>();
 	dma1.IFCR.TCIF1.set(true);
 }
 
 void DMA1_CH2_IRQHandler(void) {
-	adc2_ticks++;
+//	adc2_ticks++;
 	auto dma1 = STM32LIB::DMA<STM32LIB::DMA1_Base_Address>();
 	dma1.IFCR.TCIF2.set(true);
 }
 
 void DMA1_CH3_IRQHandler(void) {
-	adc3_ticks++;
+//	adc3_ticks++;
 	auto dma1 = STM32LIB::DMA<STM32LIB::DMA1_Base_Address>();
 	dma1.IFCR.TCIF3.set(true);
+
+	if(calibrating_current) {
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+		vTaskNotifyGiveFromISR(adc_calibration_task, &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	}
 
 	wake_dac_task(); // all ADC samples have been collected, run the motor control
 }
