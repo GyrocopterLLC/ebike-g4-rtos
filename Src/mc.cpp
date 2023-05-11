@@ -193,6 +193,8 @@ void mc_startup_post_rtos() {
 
 	// now that both ADC and DRV8353 are up and running, calibrate the current sensors
 	// best to do this without motor running, too.
+	// Let's wait about 25ms for power to stabilize first
+	vTaskDelay(pdMS_TO_TICKS(25));
 	adc_calibrate_currents(drv_handle);
 
 	// and now that the drv8353 is enabled, let's turn on the PWM interrupts

@@ -396,9 +396,9 @@ void adc_get_currents(ADC_Current_T* currents) {
 	// IA and IC current analog signals swapped.
 	// This means ADC1 is actually converting IA and ADC3 is converting IC,
 	// not the other way around as shown in the const defines
-	currents->iA = static_cast<float>(adc1_raw_regular_results[0]) / (4095.0f);
-	currents->iB = static_cast<float>(adc2_raw_regular_results[0]) / (4095.0f);
-	currents->iC = static_cast<float>(adc3_raw_regular_results[0]) / (4095.0f);
+	currents->iA = (static_cast<float>(adc1_raw_regular_results[0]) / (4095.0f)) - IaNull;
+	currents->iB = (static_cast<float>(adc2_raw_regular_results[0]) / (4095.0f)) - IbNull;
+	currents->iC = (static_cast<float>(adc3_raw_regular_results[0]) / (4095.0f)) - IcNull;
 }
 
 void adc_calibrate_currents(EbikeLib::DRV8353* drv) {
@@ -443,7 +443,6 @@ void adc_calibrate_currents(EbikeLib::DRV8353* drv) {
 	IaNull = static_cast<float>(channelAsum / NumCalibrationSamples) / (4095.0f);
 	IbNull = static_cast<float>(channelBsum / NumCalibrationSamples) / (4095.0f);
 	IcNull = static_cast<float>(channelCsum / NumCalibrationSamples) / (4095.0f);
-
 }
 
 extern "C" {

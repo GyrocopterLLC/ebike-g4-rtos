@@ -239,9 +239,9 @@ bool DRV8353::set_calibration(uint8_t channel_bit_pack) {
 			static_cast<uint16_t>(DRV8353_CSA_RegBits::CalC);
 
 	uint16_t new_cal = 0;
-	if(channel_bit_pack && 0x01) new_cal = new_cal + static_cast<uint16_t>(DRV8353_CSA_RegBits::CalA);
-	if(channel_bit_pack && 0x02) new_cal = new_cal + static_cast<uint16_t>(DRV8353_CSA_RegBits::CalB);
-	if(channel_bit_pack && 0x04) new_cal = new_cal + static_cast<uint16_t>(DRV8353_CSA_RegBits::CalC);
+	if(channel_bit_pack & 0x01) new_cal = new_cal + static_cast<uint16_t>(DRV8353_CSA_RegBits::CalA);
+	if(channel_bit_pack & 0x02) new_cal = new_cal + static_cast<uint16_t>(DRV8353_CSA_RegBits::CalB);
+	if(channel_bit_pack & 0x04) new_cal = new_cal + static_cast<uint16_t>(DRV8353_CSA_RegBits::CalC);
 
 	temp_reg = read_reg(DRV8353_Registers::CSA_Control_Reg);
 	temp_reg = temp_reg & (~cal_bits);
