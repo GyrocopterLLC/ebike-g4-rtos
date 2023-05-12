@@ -4,6 +4,32 @@
 
 using namespace EbikeLib;
 
+void PID::calc(float error) {
+	float OutPreSat, Up, Ud, Out;
+	Up = _Kp*error; // Proportional effort
+	Ui = Ui + Up*_Ki + SatErr*_Kc; // Integral effort with anti-windup
+	Ud = _Kd * (Up - Up1); // Derivative effort
+	OutPreSat = Up + Ui + Ud;
+	// Clamp to min / max
+	if(OutPreSat > OutMax) {
+		Out = OutMax;
+	}
+	else if(OutPreSat < OutMin) {
+		Out = OutMin;
+	}
+	else {
+		Out = OutPreSat;
+	}
+	SatErr = Out - OutPreSat;
+	Up1 = Up;
+}
+
+void PID::reset() {
+	Ui = 0.0f;
+	SatErr = 0.0f;
+	Up1 = 0.0f;
+}
+
 void SVM::calc(float alpha, float beta) {
 
 	// Sector determination

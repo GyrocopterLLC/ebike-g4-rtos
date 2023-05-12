@@ -5,12 +5,18 @@
 
 #include "DRV8353.hpp"
 
-typedef struct _ADC_Current_T {
+struct ADC_Current_T {
 	float iA;
 	float iB;
 	float iC;
 
-} ADC_Current_T;
+};
+
+struct ADC_Voltage_T {
+	float vA;
+	float vB;
+	float vC;
+};
 
 void adc_init();
 void adc_get_currents(ADC_Current_T* currents);

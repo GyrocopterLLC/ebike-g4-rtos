@@ -401,6 +401,11 @@ void adc_get_currents(ADC_Current_T* currents) {
 	currents->iC = (static_cast<float>(adc3_raw_regular_results[0]) / (4095.0f)) - IcNull;
 }
 
+void adc_get_voltages(ADC_Voltage_T* voltages) {
+	// convert and return voltages at floats
+
+}
+
 void adc_calibrate_currents(EbikeLib::DRV8353* drv) {
 	// DRV8353 has a calibrate function that shorts the inputs to each
 	// current sensor, allowing us to measure the zero current point
