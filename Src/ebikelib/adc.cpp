@@ -87,7 +87,7 @@ static void ADC_Enable() {
  * Slot:	1		2		3		4		5
  * ADC1: 	Ic		Vbus	Vbus	MotorT	MotorT
  * ADC2:	Ib		Va		Vb		Thr		FetT
- * ADC3: 	Ia		Vc		Vc		Vc		Vc
+ * ADC3: 	Ia		Vc		Vc		Vref	Vref
  *
  * Note that each "slot" above is repeated 2x, so there are 10 conversions
  * in each sequence. Signals in Slot 1 have the fastest sampling time of 2.5
@@ -191,10 +191,9 @@ void adc_init() {
 		set_sampling_time<ADC_Periph::ADC2, ADC_VB_Channel>(4);
 		set_sampling_time<ADC_Periph::ADC2, ADC_FET_Temp_Channel>(4);
 		set_sampling_time<ADC_Periph::ADC2, ADC_Thr_Channel>(4);
-    // VC gets 47.5 cycles
+    // VC and Vref get 47.5 cycles
 		set_sampling_time<ADC_Periph::ADC3, ADC_VC_Channel>(4);
-    // VBUS gets 47.5 cycles
-//		set_sampling_time<ADC_Periph::ADC4, ADC_Vbus_Channel>(4);
+		set_sampling_time<ADC_Periph::ADC3, ADC_Vref_Channel>(4);
 
 	// Conversion sequences!
 	// Regular sequence - 10 conversions for everybody
@@ -230,10 +229,10 @@ void adc_init() {
 					STM32LIB::ADC_SQR1::SQ4<ADC_VC_Channel>>();
 	adc3.SQR2.apply<STM32LIB::ADC_SQR2::SQ5<ADC_VC_Channel>,
 					STM32LIB::ADC_SQR2::SQ6<ADC_VC_Channel>,
-					STM32LIB::ADC_SQR2::SQ7<ADC_VC_Channel>,
-					STM32LIB::ADC_SQR2::SQ8<ADC_VC_Channel>,
-					STM32LIB::ADC_SQR2::SQ9<ADC_VC_Channel>>();
-	adc3.SQR3.apply<STM32LIB::ADC_SQR3::SQ10<ADC_VC_Channel>>();
+					STM32LIB::ADC_SQR2::SQ7<ADC_Vref_Channel>,
+					STM32LIB::ADC_SQR2::SQ8<ADC_Vref_Channel>,
+					STM32LIB::ADC_SQR2::SQ9<ADC_Vref_Channel>>();
+	adc3.SQR3.apply<STM32LIB::ADC_SQR3::SQ10<ADC_Vref_Channel>>();
 //    // and ADC4 converts VBUS 8 times
 //	adc4.SQR1.apply<STM32LIB::ADC_SQR1::L<7>,
 //					STM32LIB::ADC_SQR1::SQ1<ADC_Vbus_Channel>,
@@ -399,6 +398,28 @@ void adc_get_currents(ADC_Current_T* currents) {
 	currents->iA = (static_cast<float>(adc1_raw_regular_results[0]) / (4095.0f)) - IaNull;
 	currents->iB = (static_cast<float>(adc2_raw_regular_results[0]) / (4095.0f)) - IbNull;
 	currents->iC = (static_cast<float>(adc3_raw_regular_results[0]) / (4095.0f)) - IcNull;
+}
+
+void adc_get_scaled_currents(ADC_Current_T* currents) {
+	// Get the raw current first
+	adc_get_currents(currents);
+
+	// These are scaled to full range of the ADC - originally 12 bits (0-4095),
+	// but now as floats are scaled from 0 to 1.0, minus the null value which should
+	// be right around the middle. So..full range is roughly -0.5 to +0.5
+	// First we need to figure out what the actual voltage of "full range" is.
+	float adc_ref_voltage = (static_cast<float>(adc3_raw_regular_results[6]) / (4095.0f));
+
+	// The following formula gives the actual VREF+ voltage supplying the device:
+	// VREF+ = VREF+_charac * VREFINT_cal / VREFINT_data
+	// Where:
+	// VREF+_charac is the VREF+ voltage used when characterizing the VREFINT during manufacturing.
+	//		(datasheet value = 3.0V at 30 degC)
+	// VREFINT_cal is the VREFINT calibration value (stored in 0x1FFF 75AA - 0x1FFF 75AB
+	// VREFINT_data is the real data converted by the ADC
+
+	uint16_t* vrefint_cal = static_cast<uint16_t*>(0x1FFF75AA);
+
 }
 
 void adc_get_voltages(ADC_Voltage_T* voltages) {

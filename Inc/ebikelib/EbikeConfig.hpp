@@ -132,6 +132,7 @@ const uint16_t ADC_Thr_Channel = 12; // ADC2
 const uint16_t ADC_Vbus_Channel = 11; // ADC1
 const uint16_t ADC_Motor_Temp_Channel = 10; // ADC1
 const uint16_t ADC_FET_Temp_Channel = 10; // ADC2
+const uint16_t ADC_Vref_Channel = 18; // ADC3
 
 // Timer Assignments
 constexpr Timer_Periph PWM_Timer = Timer_Periph::Timer8;
