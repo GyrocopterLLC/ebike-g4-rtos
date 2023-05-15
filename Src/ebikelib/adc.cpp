@@ -7,6 +7,7 @@
 #include "Adc.hpp"
 #include "AdcHelpers.hpp"
 #include "NvicHelpers.hpp"
+#include "FOC_Lib.hpp"
 
 using namespace EbikeLib;
 
@@ -41,6 +42,22 @@ uint16_t adc3_raw_regular_results[num_adc_conversions];
 float IaNull;
 float IbNull;
 float IcNull;
+
+uint8_t adc_biquad_static[sizeof(Biquad_Filter)];
+Biquad_Filter* adc_biquad;
+
+// 500 Hz low pass filter at 20kHz sampling
+//B0	0.005543
+//B1	0.011085
+//B2	0.005543
+//A1	-1.778605
+//A2	0.800776
+
+const float ADCLPF_A1 = -1.778605f;
+const float ADCLPF_A2 = 0.800776f;
+const float ADCLPF_B0 = 0.005543f;
+const float ADCLPF_B1 = 0.011085f;
+const float ADCLPF_B2 = 0.005543f;
 
 //uint16_t adc4_raw_regular_results[8];
 
@@ -99,6 +116,9 @@ static void ADC_Enable() {
  * depending on if the adc channel is 1-5 (fast channels) or 6+ (slow channels).
  */
 void adc_init() {
+
+	// Initialize biquad filter for lowpass Vref
+	adc_biquad = new(adc_biquad_static) Biquad_Filter(ADCLPF_A1, ADCLPF_A2, ADCLPF_B0, ADCLPF_B1, ADCLPF_B2);
 
 	// Change GPIOs to analog mode
 	gpio_mode<ADC_IC_Pin.Port, ADC_IC_Pin.Num, STM32LIB::GPIO_Mode::Analog>();
@@ -403,32 +423,16 @@ void adc_get_currents(ADC_Current_T* currents) {
 void adc_get_scaled_currents(ADC_Current_T* currents) {
 	// Get the raw current first
 	adc_get_currents(currents);
+	float adc_vref = adc_biquad->get();
 
 	// These are scaled to full range of the ADC - originally 12 bits (0-4095),
 	// but now as floats are scaled from 0 to 1.0, minus the null value which should
 	// be right around the middle. So..full range is roughly -0.5 to +0.5
-	// First we need to figure out what the actual voltage of "full range" is.
-	float adc_ref_voltage = (static_cast<float>(adc3_raw_regular_results[6]) / (4095.0f));
-
-	// The following formula gives the actual VREF+ voltage supplying the device:
-	// VREF+ = VREF+_charac * VREFINT_cal / VREFINT_data
-	// Where:
-	// VREF+_charac is the VREF+ voltage used when characterizing the VREFINT during manufacturing.
-	//		(datasheet value = 3.0V at 30 degC)
-	// VREFINT_cal is the VREFINT calibration value (stored in 0x1FFF 75AA - 0x1FFF 75AB
-	// VREFINT_data is the real data converted by the ADC
-
-	uint16_t* vrefint_cal = reinterpret_cast<uint16_t*>(0x1FFF75AA);
-	float vrefint_cal_f = static_cast<float>(*vrefint_cal) / (4095.0f);
-	// TODO: this vref calculation should be low-pass filtered.
-	float vref = 3.0f * vrefint_cal_f / adc_ref_voltage; // Vref+_charac * Vrefint_cal / Vrefint_data
-
-	// Now we've got raw currents and real reference voltage.
 	// Next we can get the real voltage measured by the ADC for each current sensor.
 
-	currents->iA = (currents->iA) * vref;
-	currents->iB = (currents->iB) * vref;
-	currents->iC = (currents->iC) * vref;
+	currents->iA = (currents->iA) * adc_vref;
+	currents->iB = (currents->iB) * adc_vref;
+	currents->iC = (currents->iC) * adc_vref;
 
 	// TODO: Grab the current sensor gain from DRV8353
 	// Right now default is 10x
@@ -451,18 +455,13 @@ void adc_get_voltages(ADC_Voltage_T* voltages) {
 
 void adc_get_scaled_voltages(ADC_Voltage_T* voltages) {
 	adc_get_voltages(voltages);
-
-	float adc_ref_voltage = (static_cast<float>(adc3_raw_regular_results[6]) / (4095.0f));
-	uint16_t* vrefint_cal = reinterpret_cast<uint16_t*>(0x1FFF75AA);
-	float vrefint_cal_f = static_cast<float>(*vrefint_cal) / (4095.0f);
-	// TODO: this vref calculation should be low-pass filtered.
-	float vref = 3.0f * vrefint_cal_f / adc_ref_voltage; // Vref+_charac * Vrefint_cal / Vrefint_data
+	float adc_vref = adc_biquad->get();
 
 	// Scale by the resistor divider as well as the reference voltage
 	// Resistor divider is 22k over 1k (1 / 23rd)
-	voltages->vA = voltages->vA * vref * 23.0f;
-	voltages->vB = voltages->vB * vref * 23.0f;
-	voltages->vC = voltages->vC * vref * 23.0f;
+	voltages->vA = voltages->vA * adc_vref * 23.0f;
+	voltages->vB = voltages->vB * adc_vref * 23.0f;
+	voltages->vC = voltages->vC * adc_vref * 23.0f;
 }
 
 void adc_calibrate_currents(EbikeLib::DRV8353* drv) {
@@ -533,6 +532,12 @@ void DMA1_CH3_IRQHandler(void) {
 		vTaskNotifyGiveFromISR(adc_calibration_task, &xHigherPriorityTaskWoken);
 		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 	}
+
+	// run low pass filter on the Vrefint channel
+	float adc_ref_voltage = static_cast<float>(adc3_raw_regular_results[6]) / (4095.0f);
+	uint16_t* vrefint_cal = reinterpret_cast<uint16_t*>(0x1FFF75AA);
+	float vrefint_cal_f = static_cast<float>(*vrefint_cal) / (4095.0f);
+	adc_biquad->calc(3.0f * vrefint_cal_f / adc_ref_voltage); // Vref+_charac * Vrefint_cal / Vrefint_data
 
 	wake_dac_task(); // all ADC samples have been collected, run the motor control
 }

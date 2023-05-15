@@ -4,6 +4,8 @@
 #pragma once
 
 #include <cstdint>
+#include "FreeRTOS.h"
+#include "semphr.h"
 
 namespace EbikeLib{
 
@@ -20,6 +22,10 @@ public:
 
 	__attribute__((noinline))
 	void sine_cosine(uint32_t* sine, uint32_t* cosine);
+
+	void calc(uint32_t angle, uint32_t* sine, uint32_t* cosine);
+private:
+	SemaphoreHandle_t mutex_h;
 };
 
 

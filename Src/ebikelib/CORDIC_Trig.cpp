@@ -1,6 +1,7 @@
 #include "STM32G473xx.hpp"
 #include "CORDIC_Trig.hpp"
-
+#include "FreeRTOS.h"
+#include "semphr.h"
 
 using namespace EbikeLib;
 
@@ -31,6 +32,9 @@ Cordic::Cordic() {
 
 	// Set NARGS to 1, so we only need to write the angle to start a conversion
 	cordic.CSR.NARGS.set(false);
+
+	// create the mutex
+	mutex_h = xSemaphoreCreateMutex();
 }
 
 void Cordic::set(uint32_t angle) {
@@ -50,4 +54,11 @@ __attribute__((noinline))
 void Cordic::sine_cosine(uint32_t* sine, uint32_t* cosine) {
 	*sine = get();
 	*cosine = get();
+}
+
+void Cordic::calc(uint32_t angle, uint32_t* sine, uint32_t* cosine) {
+	xSemaphoreTake(mutex_h, portMAX_DELAY);
+	set(angle);
+	sine_cosine(sine, cosine);
+	xSemaphoreGive(mutex_h);
 }

@@ -92,6 +92,27 @@ public:
 	void calc(float Alpha, float Beta, float sine, float cosine);
 };
 
+class Biquad_Filter {
+public:
+	// Default constructor - explicitly assign coefficients
+	Biquad_Filter(float A1, float A2, float B0, float B1, float B2) :
+		_A1(A1), _A2(A2), _B0(B0), _B1(B1), _B2(B2),
+		_U1(0.0f), _U2(0.0f), _Y(0.0f) {}
+	// Low pass filter constructor - calculate coefficients
+	// Biquad_Filter(float Fs, float f0, float Q);
+
+	void calc(float input);
+	float get();
+private:
+    float _A1; // Param: A1 gain (output at one delay)
+    float _A2; // Param: A2 gain (output at two delays)
+    float _B0; // Param: B0 gain (input, no delay)
+    float _B1; // Param: B1 gain (input, one delay)
+    float _B2; // Param: B2 gain (input, two delays)
+    float _U1; // State: First delay register
+    float _U2; // State: Second delay register
+    float _Y; // Output value
+};
 
 } // namespace EbikeLib
 

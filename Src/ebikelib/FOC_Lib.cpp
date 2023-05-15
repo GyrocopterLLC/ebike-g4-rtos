@@ -122,3 +122,50 @@ void Park::calc(float Alpha, float Beta, float sine, float cosine) {
 	Qs = Beta*cosine - Alpha*sine;
 }
 
+void Biquad_Filter::calc(float input) {
+    // Calculate intermediate value
+    float intermed = (input) - (_U1 * _A1) - (_U2 * _A2);
+    // Calculate output value
+    float output = (intermed * _B0) + (_U1 * _B1) + (_U2 * _B2);
+    // Update stored values
+    _U2 = _U1;
+    _U1 = intermed;
+
+    _Y = output;
+}
+
+float Biquad_Filter::get() {
+	return _Y;
+}
+
+/*
+Biquad_Filter::Biquad_Filter(float Fs, float f0, float Q) {
+    // Intermediate values
+    float w0, sinw0, cosw0, alpha;
+    // Cancel operation if inputs are invalid
+    if ((Fs == 0.0f) || (f0 == 0.0f) || (Q == 0.0f)) {
+        B2 = B1 = B0 = A2 = A1 = 0.0f;
+    } else {
+    	// Calculate the intermediates
+    	w0 = 2.0f * (f0 / Fs); // Leaving out PI, the CORDIC input is scaled by 1/PI anyway
+    	// Convert angle from 0->2pi to -pi->+pi
+    	if(w0 > 1.0f) w0 = w0 - 2.0f;
+
+		//CORDIC_CalcSinCosDeferred_Def(w0);
+		//CORDIC_GetResults_Def(sinw0, cosw0);
+	//    CORDIC_CalcSinCos(w0, &sinw0, &cosw0);
+
+	 // Need to use slower arm_math sin/cos function
+
+		arm_sin_cos_f32(w0, &sinw0, &cosw0);
+		alpha = sinw0 / (2.0f * Q);
+
+		// Calculate the filter constants
+		B0 = (1.0f - cosw0) / (2.0f) / (1.0f + alpha);
+		B1 = (1.0f - cosw0) / (1.0f + alpha);
+		B2 = biq->B0;
+		A1 = ((-2.0f) * cosw0) / (1.0f + alpha);
+		A2 = (1.0f - alpha) / (1.0f + alpha);
+    }
+}
+*/

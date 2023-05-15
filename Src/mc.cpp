@@ -67,29 +67,6 @@ volatile DacChoice dac1sel = DacChoice::RampAngle, dac2sel = DacChoice::SVM_TA;
 
 bool dac_task_is_running = false;
 
-#if 0
-__attribute__((noinline))
-uint32_t cordic_get() {
-	auto cordic = STM32LIB::CORDIC<STM32LIB::CORDIC_Base_Address>();
-
-	return cordic.RDATA.get();
-}
-
-__attribute__((noinline))
-void cordic_get2(uint32_t* arg1, uint32_t* arg2) {
-
-	*arg1 = cordic_get();
-	*arg2 = cordic_get();
-}
-
-void cordic_set(uint32_t newval) {
-	auto cordic = STM32LIB::CORDIC<STM32LIB::CORDIC_Base_Address>();
-
-	cordic.WDATA.set(newval);
-}
-
-#endif
-
 int32_t float_to_q31(float input) {
     int32_t retval;
     retval = static_cast<int32_t>(input*2147483648.0f); // 2^31
@@ -298,9 +275,7 @@ void DAC_Task(void* pvParameters) {
 		angle_int = float_to_q31(anglef);
 
 		//angle_int = static_cast<int32_t>(rampgen.get_output() * 2147483648.0f);
-
-		cordic.set(angle_int);
-		cordic.sine_cosine(&cordic_sine, &cordic_cosine);
+		cordic.calc(angle_int, &cordic_sine, &cordic_cosine);
 
 		sinef = 2.0f*q31_to_float(cordic_sine);
 		//sinef = 2.0f*static_cast<float>(cordic_sine)/2147483648.0f;
