@@ -418,13 +418,51 @@ void adc_get_scaled_currents(ADC_Current_T* currents) {
 	// VREFINT_cal is the VREFINT calibration value (stored in 0x1FFF 75AA - 0x1FFF 75AB
 	// VREFINT_data is the real data converted by the ADC
 
-	uint16_t* vrefint_cal = static_cast<uint16_t*>(0x1FFF75AA);
+	uint16_t* vrefint_cal = reinterpret_cast<uint16_t*>(0x1FFF75AA);
+	float vrefint_cal_f = static_cast<float>(*vrefint_cal) / (4095.0f);
+	// TODO: this vref calculation should be low-pass filtered.
+	float vref = 3.0f * vrefint_cal_f / adc_ref_voltage; // Vref+_charac * Vrefint_cal / Vrefint_data
+
+	// Now we've got raw currents and real reference voltage.
+	// Next we can get the real voltage measured by the ADC for each current sensor.
+
+	currents->iA = (currents->iA) * vref;
+	currents->iB = (currents->iB) * vref;
+	currents->iC = (currents->iC) * vref;
+
+	// TODO: Grab the current sensor gain from DRV8353
+	// Right now default is 10x
+
+	// Calculate the current - scale down by the DRV8353's gain and then Ohm's law
+	// with the shunt resistance value
+	currents->iA = (currents->iA) * 0.1f * 400.0f;
+	currents->iB = (currents->iB) * 0.1f * 400.0f;
+	currents->iC = (currents->iC) * 0.1f * 400.0f;
 
 }
 
 void adc_get_voltages(ADC_Voltage_T* voltages) {
-	// convert and return voltages at floats
+	// convert and return voltages as floats
 
+	voltages->vA = (static_cast<float>(adc2_raw_regular_results[2]) / (4095.0f));
+	voltages->vB = (static_cast<float>(adc2_raw_regular_results[4]) / (4095.0f));
+	voltages->vC = (static_cast<float>(adc3_raw_regular_results[2]) / (4095.0f));
+}
+
+void adc_get_scaled_voltages(ADC_Voltage_T* voltages) {
+	adc_get_voltages(voltages);
+
+	float adc_ref_voltage = (static_cast<float>(adc3_raw_regular_results[6]) / (4095.0f));
+	uint16_t* vrefint_cal = reinterpret_cast<uint16_t*>(0x1FFF75AA);
+	float vrefint_cal_f = static_cast<float>(*vrefint_cal) / (4095.0f);
+	// TODO: this vref calculation should be low-pass filtered.
+	float vref = 3.0f * vrefint_cal_f / adc_ref_voltage; // Vref+_charac * Vrefint_cal / Vrefint_data
+
+	// Scale by the resistor divider as well as the reference voltage
+	// Resistor divider is 22k over 1k (1 / 23rd)
+	voltages->vA = voltages->vA * vref * 23.0f;
+	voltages->vB = voltages->vB * vref * 23.0f;
+	voltages->vC = voltages->vC * vref * 23.0f;
 }
 
 void adc_calibrate_currents(EbikeLib::DRV8353* drv) {

@@ -21,6 +21,8 @@ struct ADC_Voltage_T {
 void adc_init();
 void adc_get_currents(ADC_Current_T* currents);
 void adc_get_scaled_currents(ADC_Current_T* currents);
+void adc_get_voltages(ADC_Voltage_T* voltages);
+void adc_get_scaled_voltages(ADC_Voltage_T* voltages);
 void adc_calibrate_currents(EbikeLib::DRV8353* drv);
 
 #endif /* ADC_HPP_ */
