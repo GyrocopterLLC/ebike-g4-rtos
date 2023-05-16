@@ -190,6 +190,9 @@ void mc_startup_post_rtos() {
 const float VdTesting = 0.0f;            // Vd testing (pu)
 const float VqTesting = 0.15f;         // Vq testing (pu)
 
+const float IdTesting = 0.0f;
+const float IqTesting = 0.5f;
+
 void Drv_Fault_Task(void* pvParameters) {
 	(void)(pvParameters);
 	Drv_Fault_Task_Handle = xTaskGetCurrentTaskHandle();
@@ -244,6 +247,10 @@ void DAC_Task(void* pvParameters) {
 
 	auto svm = EbikeLib::SVM();
 	auto ipark = EbikeLib::Inverse_Park();
+	auto park = EbikeLib::Park();
+	auto clarke = EbikeLib::Clarke();
+	auto pid_d = EbikeLib::PID();
+	auto pid_q = EbikeLib::PID();
 
 	// Sampling is now 20kHz
 	// So rampcont target of 1Hz is value of 0.00005 (1/20000)
@@ -260,7 +267,8 @@ void DAC_Task(void* pvParameters) {
 	while(true) {
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // triggered by ADC completion
 		// Get phase currents
-		adc_get_currents(&currents);
+		adc_get_scaled_currents(&currents);
+
 		// perform Hall sensor math
 		hall_handle->increment_angle();
 
@@ -283,7 +291,14 @@ void DAC_Task(void* pvParameters) {
 		cosinef = 2.0f*q31_to_float(cordic_cosine);
 		//cosinef = 2.0f*static_cast<float>(cordic_cosine)/2147483648.0f;
 
-		ipark.calc(VdTesting,  VqTesting,  sinef,  cosinef);
+
+		clarke.calc(currents.iA, currents.iB); // convert 3-phase to 2-phase (both stationary)
+		park.calc(clarke.Alpha, clarke.Beta, sinef, cosinef); // convert to rotating
+
+		pid_d.calc(IdTesting - park.Ds);
+		pid_q.calc(IqTesting - park.Qs);
+
+		ipark.calc(pid_d.getOutput(),  pid_q.getOutput(),  sinef,  cosinef);
 
 		svm.calc(ipark.Alpha, ipark.Beta);
 		pwm_handle->set_duty(svm.tA, svm.tB,  svm.tC);

@@ -32,6 +32,7 @@ public:
 	float getKi() {return _Ki;}
 	float getKd() {return _Kd;}
 	float getKc() {return _Kc;}
+	float getOutput() {return Out;}
 
 private:
 	float _Kp = DefaultKp;
@@ -43,6 +44,7 @@ private:
 	float OutMin = DefaultPIDMin;
 	float OutMax = DefaultPIDMax;
 	float SatErr = 0.0f;
+	float Out = 0.0f;
 
 };
 

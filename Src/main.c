@@ -223,7 +223,7 @@ int main(void)
 
 	xTaskCreate( tusb_task, "TinyUSB Task", configMINIMAL_STACK_SIZE*4, NULL, tskIDLE_PRIORITY, NULL );
 	xTaskCreate( loopback_task, "Loopback Task", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY, NULL );
-	xTaskCreate( DAC_Task, "DAC Task", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
+	xTaskCreate( DAC_Task, "DAC Task", DAC_TASK_STACK_SIZE, NULL, 3, NULL);
 	xTaskCreate( Drv_Fault_Task, "DRV Fault Task", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
 	mc_startup_pre_rtos();

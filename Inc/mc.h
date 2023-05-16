@@ -7,6 +7,7 @@
 extern "C" {
 #endif
 
+#define DAC_TASK_STACK_SIZE		(512u)
 
 void mc_startup_pre_rtos();
 

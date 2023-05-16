@@ -5,7 +5,7 @@
 using namespace EbikeLib;
 
 void PID::calc(float error) {
-	float OutPreSat, Up, Ud, Out;
+	float OutPreSat, Up, Ud;
 	Up = _Kp*error; // Proportional effort
 	Ui = Ui + Up*_Ki + SatErr*_Kc; // Integral effort with anti-windup
 	Ud = _Kd * (Up - Up1); // Derivative effort
