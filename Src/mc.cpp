@@ -16,6 +16,7 @@
 #include "NvicHelpers.hpp"
 #include "CORDIC_Trig.hpp"
 #include "DRV8353.hpp"
+#include "Throttle.hpp"
 //#include "usb_info.h"
 #include "cobs.h"
 
@@ -38,6 +39,9 @@ uint8_t pwm_static_placement_buf[sizeof(PwmT)];
 using HallT = EbikeLib::HallSensor<EbikeLib::Hall_Timer, EbikeLib::HALL_A_Pin, EbikeLib::HALL_B_Pin, EbikeLib::HALL_C_Pin>;
 HallT* hall_handle = nullptr;
 uint8_t hall_static_placement_buf[sizeof(HallT)];
+
+EbikeLib::Throttle* thr_handle = nullptr;
+uint8_t thr_static_placement_buf[sizeof(EbikeLib::Throttle)];
 
 //EbikeLib::USB_Info* usb_info_handle = nullptr;
 //uint8_t usb_info_static_placement_buf[sizeof(EbikeLib::USB_Info)];
@@ -162,6 +166,9 @@ void mc_startup_pre_rtos() {
 	EbikeLib::hall_gpio_config<EbikeLib::HALL_B_Pin, EbikeLib::Hall_B_Af_Num>();
 	EbikeLib::hall_gpio_config<EbikeLib::HALL_C_Pin, EbikeLib::Hall_C_Af_Num>();
 	hall_handle = new(hall_static_placement_buf) HallT();
+
+	// Create the throttle processor
+	thr_handle = new(thr_static_placement_buf) EbikeLib::Throttle();
 }
 
 void mc_startup_post_rtos() {
@@ -245,6 +252,7 @@ void DAC_Task(void* pvParameters) {
 	int32_t angle_int = 0x80000000u;
 	float sinef, cosinef, anglef;
 	uint8_t hall_state;
+	float throttle_angle;
 
 	auto svm = EbikeLib::SVM();
 	auto ipark = EbikeLib::Inverse_Park();
@@ -272,6 +280,10 @@ void DAC_Task(void* pvParameters) {
 
 		// perform Hall sensor math
 		hall_handle->increment_angle();
+
+		// Throttle processing
+		thr_handle->process(adc_get_scaled_throttle());
+		throttle_angle = thr_handle->getOutput();
 
 		rampcont.calc();
 		rampgen.set_freq(rampcont.get_output());
@@ -389,6 +401,7 @@ void DAC_Task(void* pvParameters) {
 				usb_packet_buffer[0] = 0x01; // Data packet tag
 				usb_packet_buffer[1] =
 						sizeof(dac_task_counter) + sizeof(anglef) + sizeof(hall_state)
+						+ sizeof(throttle_angle)
 						+ sizeof(svm.tA) + sizeof(svm.tB) + sizeof(svm.tC)
 						+ sizeof(currents.iA) + sizeof(currents.iB) + sizeof(currents.iC);
 				packet_pointer = 2;
@@ -398,6 +411,8 @@ void DAC_Task(void* pvParameters) {
 				packet_pointer += sizeof(anglef);
 				memcpy(&(usb_packet_buffer[packet_pointer]), &hall_state, sizeof(hall_state));
 				packet_pointer += sizeof(hall_state);
+				memcpy(&(usb_packet_buffer[packet_pointer]), &throttle_angle, sizeof(throttle_angle));
+				packet_pointer += sizeof(throttle_angle);
 				memcpy(&(usb_packet_buffer[packet_pointer]), &svm.tA, sizeof(svm.tA));
 				packet_pointer += sizeof(svm.tA);
 				memcpy(&(usb_packet_buffer[packet_pointer]), &svm.tB, sizeof(svm.tB));

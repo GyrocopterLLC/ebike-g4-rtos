@@ -102,6 +102,7 @@ static void ADC_Enable() {
  * for each channel being sampled simultaneously.
  *
  * Slot:	1		2		3		4		5
+ * ArrIdx: 	0,1		2,3		4,5		6,7		8,9
  * ADC1: 	Ic		Vbus	Vbus	MotorT	MotorT
  * ADC2:	Ib		Va		Vb		Thr		FetT
  * ADC3: 	Ia		Vc		Vc		Vref	Vref
@@ -462,6 +463,16 @@ void adc_get_scaled_voltages(ADC_Voltage_T* voltages) {
 	voltages->vA = voltages->vA * adc_vref * 23.0f;
 	voltages->vB = voltages->vB * adc_vref * 23.0f;
 	voltages->vC = voltages->vC * adc_vref * 23.0f;
+}
+
+
+float adc_get_throttle() {
+	return (static_cast<float>(adc2_raw_regular_results[6]) / (4095.0f));
+}
+
+float adc_get_scaled_throttle() {
+	float raw = adc_get_throttle();
+	return raw * (adc_biquad->get());
 }
 
 void adc_calibrate_currents(EbikeLib::DRV8353* drv) {
