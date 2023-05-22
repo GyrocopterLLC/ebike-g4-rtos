@@ -244,6 +244,7 @@ void DAC_Task(void* pvParameters) {
 	//float angle = 0.5f;
 	int32_t angle_int = 0x80000000u;
 	float sinef, cosinef, anglef;
+	uint8_t hall_state;
 
 	auto svm = EbikeLib::SVM();
 	auto ipark = EbikeLib::Inverse_Park();
@@ -281,6 +282,7 @@ void DAC_Task(void* pvParameters) {
 		anglef = hall_handle->get_angle();
 #endif
 		angle_int = float_to_q31(anglef);
+		hall_state = hall_handle->get_state();
 
 		//angle_int = static_cast<int32_t>(rampgen.get_output() * 2147483648.0f);
 		cordic.calc(angle_int, &cordic_sine, &cordic_cosine);
@@ -386,13 +388,16 @@ void DAC_Task(void* pvParameters) {
 			if(dac_task_counter % 40 == 0) { // once per 2 milliseconds
 				usb_packet_buffer[0] = 0x01; // Data packet tag
 				usb_packet_buffer[1] =
-						sizeof(dac_task_counter) + sizeof(anglef) + sizeof(svm.tA) + sizeof(svm.tB) + sizeof(svm.tC)
+						sizeof(dac_task_counter) + sizeof(anglef) + sizeof(hall_state)
+						+ sizeof(svm.tA) + sizeof(svm.tB) + sizeof(svm.tC)
 						+ sizeof(currents.iA) + sizeof(currents.iB) + sizeof(currents.iC);
 				packet_pointer = 2;
 				memcpy(&(usb_packet_buffer[packet_pointer]), &dac_task_counter, sizeof(dac_task_counter));
 				packet_pointer += sizeof(dac_task_counter);
 				memcpy(&(usb_packet_buffer[packet_pointer]), &anglef, sizeof(anglef));
 				packet_pointer += sizeof(anglef);
+				memcpy(&(usb_packet_buffer[packet_pointer]), &hall_state, sizeof(hall_state));
+				packet_pointer += sizeof(hall_state);
 				memcpy(&(usb_packet_buffer[packet_pointer]), &svm.tA, sizeof(svm.tA));
 				packet_pointer += sizeof(svm.tA);
 				memcpy(&(usb_packet_buffer[packet_pointer]), &svm.tB, sizeof(svm.tB));

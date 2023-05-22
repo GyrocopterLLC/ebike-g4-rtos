@@ -23,6 +23,7 @@ const float DefaultHallTick = 1.0f; // Requested tick in microseconds
 // at 1us, the minimum motor speed (before rollovers) is 152 eRPM
 // for a 700C wheel with 23 pole pairs, this is 0.5mph
 //
+const uint32_t RotationsToValid = 24; // 4 full electrical rotations (4*6)
 
 enum class HallState {
 	Stopped,
@@ -116,6 +117,10 @@ public:
 			return true;
 	}
 
+	uint8_t get_state() {
+		return CurrentState;
+	}
+
 	void increment_angle() {
 		Angle += AngleIncrement;
 		Angle = clip_to_one(Angle);
@@ -135,8 +140,10 @@ public:
 	}
 
 	float get_angle() {
-		return FilteredAngle;
-		//return Angle;
+		if(Valid == HallAngleValid::Valid)
+			return FilteredAngle;
+		else
+			return get_state_midpoint_angle(CurrentState);
 	}
 
 	void capture_irq_callback() {
@@ -149,9 +156,14 @@ public:
 			CaptureForState[CurrentState-1] = CaptureValue;
 		}
 
+		if(Valid == HallAngleValid::Invalid) {
+			SteadyRotationCount++;
+			if(SteadyRotationCount > RotationsToValid) {
+				Valid = HallAngleValid::Valid;
+			}
+		}
+
 		// Determine the rotation speed from this latest capture value
-		// TODO: Ensure we've had at least all states captured since last overflow
-		// before doing a speed calculation otherwise it won't be accurate.
 		auto all_states_capture = std::accumulate(CaptureForState.begin(), CaptureForState.end(), 0);
 
 		float captime_us = static_cast<float>(all_states_capture)*ActualTimerTick_us;
@@ -208,12 +220,6 @@ public:
 			AngleStepDiff = 0.0f;
 			break;
 		}
-
-		// TODO:
-		// Implement the called-every-so-often function
-		// - tracks a filtered and unfiltered angle, filtering to prevent jumps at Hall state changes
-		// Implement the get-angle-now function
-		// - chooses angle based on rotation status, if not rotating must use hall state angle
 	}
 
 	void overflow_irq_callback() {
