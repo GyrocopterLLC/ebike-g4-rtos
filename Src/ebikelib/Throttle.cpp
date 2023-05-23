@@ -23,7 +23,11 @@ bool Throttle::detectStuck(float raw_voltage) {
 
 void Throttle::process(float raw_voltage){
 	raw_voltage = raw_voltage * ResistorRatio;
-	if(detectStuck(raw_voltage)) {
+	// Clamp to maximum, don't want over 100% throttle. Who knows what demons that would summon.
+	if(raw_voltage > RawMax) {
+		raw_voltage = RawMax;
+	}
+	if(!detectStuck(raw_voltage)) {
 		Output = 0.0f;
 	} else {
 		// Calculate filtered output

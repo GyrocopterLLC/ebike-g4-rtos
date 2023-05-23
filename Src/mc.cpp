@@ -199,6 +199,7 @@ const float VqTesting = 0.15f;         // Vq testing (pu)
 
 const float IdTesting = 0.0f;
 const float IqTesting = 0.5f;
+const float IqMax = 1.0f; // Aim for 100% = 1.0A
 
 void Drv_Fault_Task(void* pvParameters) {
 	(void)(pvParameters);
@@ -310,7 +311,8 @@ void DAC_Task(void* pvParameters) {
 		park.calc(clarke.Alpha, clarke.Beta, sinef, cosinef); // convert to rotating
 
 		pid_d.calc(IdTesting - park.Ds);
-		pid_q.calc(IqTesting - park.Qs);
+		// pid_q.calc(IqTesting - park.Qs);
+		pid_q.calc((throttle_angle*IqMax) - park.Qs);
 
 		ipark.calc(pid_d.getOutput(),  pid_q.getOutput(),  sinef,  cosinef);
 
