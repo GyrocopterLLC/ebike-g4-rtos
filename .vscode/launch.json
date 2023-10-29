@@ -1,0 +1,47 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [       
+        
+        {
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceRoot}/build/ebike-g4-rtos.elf",
+            "name": "JTAG DEBUGGING ",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "armToolchainPath": "C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/12.3 rel1/bin",
+            "interface": "swd",
+            "svdFile": "${workspaceRoot}/device/STM32G473.svd",
+            "device":"STM32G473CETx",
+            "runToEntryPoint": "main",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32g4x.cfg"
+            ],
+            "searchDir": ["C:/openocd/scripts"],
+            "debuggerArgs": [
+                "-d",
+                "${workspaceRoot}"
+              ],
+            "preLaunchCommands": [
+                "set mem inaccessible-by-default off",
+                "monitor reset"
+            ],
+            "postLaunchCommands": [
+                "monitor reset init",
+                "monitor sleep 200"
+            ],
+            "preRestartCommands": [
+                "load",
+                "enable breakpoint",
+                "monitor reset init",
+                "monitor sleep 200"
+            ],
+            "showDevDebugOutput": "parsed",
+          
+       }
+    ]
+}

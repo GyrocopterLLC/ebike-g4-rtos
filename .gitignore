@@ -3,6 +3,5 @@
 /debug/
 /Release/
 /release/
-
-# Metadata when opened with Visual Studio Code
-/.vscode/
+/build/
+/Build/

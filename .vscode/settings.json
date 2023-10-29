@@ -1,0 +1,8 @@
+{
+    "cmake.cacheInit": null,
+    "cmake.generator": "Unix Makefiles",
+    "files.associations": {
+        "array": "cpp",
+        "utility": "cpp"
+    }
+}
