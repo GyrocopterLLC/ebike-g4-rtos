@@ -178,10 +178,8 @@ static void loopback_task(void* pvParameters) {
 	// Simple read and loop back the read data
 
 	for(;;) {
-		//while ( tud_cdc_available()) {
 		while ( VCP_InWaiting() > 0) {
 			// read and echo back
-			//uint32_t count = tud_cdc_read(buf, sizeof(buf));
 			uint32_t count = VCP_Read(buf, sizeof(buf));
 
 			if(buf[0] == 'D') { // start debug info
@@ -214,40 +212,44 @@ char tt_buf[128];
 static void test_usb_throughput(void* pvParameters){
 	(void)(pvParameters);
 
-	// wait until we are started by the loopback_task
-	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+  while (1)
+  {
+    // wait until we are started by the loopback_task
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-	// Try to send a big packet of data
-	for(int i = 0; i < 128; i++){
-		tt_buf[i] = i;
-	}
+    // Try to send a big packet of data
+    for (int i = 0; i < 128; i++)
+    {
+      tt_buf[i] = i;
+    }
 
-	VCP_Write(tt_buf, 128); // only sends 64
+    VCP_Write(tt_buf, 128); // only sends 64
 
-	vTaskDelay(500);
-	VCP_Write(tt_buf, 64); // sends 64
-	VCP_Write(&(tt_buf[64]), 64); // fails to send
+    vTaskDelay(500);
+    VCP_Write(tt_buf, 64);        // sends 64
+    VCP_Write(&(tt_buf[64]), 64); // fails to send
 
-	vTaskDelay(500);
-	VCP_Write(tt_buf, 64); // sent at 1698260597.354056000
-	while(!VCP_Write(&(tt_buf[64]), 64)) {} // sent at 1698260597.354417000
-	// difference in timestamps: 0.000361 (361us, less than a SOP!)
+    vTaskDelay(500);
+    VCP_Write(tt_buf, 64); // sent at 1698260597.354056000
+    while (!VCP_Write(&(tt_buf[64]), 64))
+    {
+    } // sent at 1698260597.354417000
+    // difference in timestamps: 0.000361 (361us, less than a SOP!)
 
-	vTaskDelay(500);
-	for(int i = 0; i < 16; i++) {
-		while(!VCP_Write(tt_buf, 64)) {}
-		while(!VCP_Write(&(tt_buf[64]), 64)) {}
+    vTaskDelay(500);
+    for (int i = 0; i < 16; i++)
+    {
+      while (!VCP_Write(tt_buf, 64))
+      {
+      }
+      while (!VCP_Write(&(tt_buf[64]), 64))
+      {
+      }
 
-		// takes about 0.2 millisecs between each!!
-		// that's not bad eh? 64 bytes / 0.2ms = 320kBps
-
-	}
-
-
-	while(1) {
-		// Stops the task
-		vTaskDelay(portMAX_DELAY);
-	}
+      // takes about 0.2 millisecs between each!!
+      // that's not bad eh? 64 bytes / 0.2ms = 320kBps
+    }
+  }
 }
 
 int main(void)

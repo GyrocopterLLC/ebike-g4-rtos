@@ -423,7 +423,6 @@ void DAC_Task(void* pvParameters) {
 				usb_packet_buffer[1] = (packet_pointer - 2); // "- 2" since data starts at byte 2, after tag and count
 
 				cobs_length = encodeCOBS(usb_packet_buffer, packet_pointer, cobs_output_packet_buffer, sizeof(cobs_output_packet_buffer));
-				//tud_cdc_write(cobs_output_packet_buffer, cobs_length);
 				VCP_Write(cobs_output_packet_buffer, cobs_length);
 			}
 		}
